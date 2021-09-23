@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -18,15 +19,17 @@ namespace TextParserApp
         //static List<string> punctList = new List<string>();
         static StringBuilder punctList = new StringBuilder();
 
-        static int longsteOffersIndex;
-        static int longsteOffersWordsLength;
-        static int shortestOffersIndex;
-        static int shortestOffersWordsLengtht;
+        static int longsteOffersOfSimbalsIndex;
+        static int longsteOffersOfSimbalLength;
+        static int shortestOffersOfWordsIndex;
+        static int shortestOffersOfWordsCount;
 
         public static int offersNumber = 0;
 
         static async Task Main(string[] args)
         {
+            Console.WriteLine("Working...........");
+
             string assemblyPath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
             string resPath = assemblyPath + "\\Resource\\Sample.txt";
 
@@ -52,27 +55,30 @@ namespace TextParserApp
             string punctPattern = @"(?:["",.?!:;']{1,1})";
             Regex punctRegex = new Regex(punctPattern);
 
-            string tempString = "";
+            string tempString = null;
 
             try
             {
                 using (var sr = new StreamReader(resPath))
                 {
-                    var stringLine = sr.ReadLine() + "\n";
+                    var stringLine = sr.ReadLine() + " ";
 
                     while (stringLine != null)
                     {
-                        var offersItems = offersSplitRegex.Split(string.Concat(tempString, stringLine + "\n")); // in dictionary test dell  + "\n"
+                        var offersItems = offersSplitRegex.Split(string.Concat(tempString, stringLine + " ")); // in dictionary test dell  + "\n"
 
                         for (int i = 0; i < offersItems.Length - 1; i++)
                         {
-                            checkLongAndShortOffers(offersItems[i].Length);
+                            checkLongOffersOfSimbals(offersNumber, offersItems[i].Length);
 
                             var words = wordsRegex.Matches(offersItems[i]);
+                            checkShortOffersOfWords(offersNumber, words.Count);
+
                             foreach (Match word in words)
                             {
+
                                 await StreamWriterWords.WriteLineAsync(word.Value);
-                                
+
                                 var charsWord = word.Value.ToLower();
 
                                 addToWordsDictionary(charsWord);
@@ -86,7 +92,6 @@ namespace TextParserApp
                             }
 
                             await StreamWriterOffers.WriteLineAsync(offersItems[i]);
-                           
 
                             offersNumber++;
                         }
@@ -94,45 +99,58 @@ namespace TextParserApp
                         tempString = offersItems.Last();
                         stringLine = sr.ReadLine();
 
-                        offersNumber++;
+                        //offersNumber++;
                     }
 
                 }
                 await StreamWriterPunctuationSymbols.WriteLineAsync(punctList);
-                
+
                 //StringBuilder buferString = new StringBuilder();
                 foreach (var word in wordsCountDictyonary.OrderBy(word => word.Key))
                 {
                     await StreamWriterWordsStatistic.WriteLineAsync($"{word.Key} - {word.Value.ToString()}");
                 }
 
-                //StringBuilder longsteString = new StringBuilder();
-                
-                //await StreamWriterOffers.FlushAsync();
-                //await streamOffers.DisposeAsync();
-                //using (StreamReader sr = new StreamReader(assemblyPath + "\\Resource\\SampleOffers.txt"))
-                //{
-                //    //bool writteLong = false;
-                //    //bool writeCurz = false;
-                //    int lineNumber=0;
-                //    await sr.ReadLineAsync();
 
-                //    while (sr != null)
-                //    {
-                //        if (lineNumber == longsteOffersIndex)
-                //        {
-                //            var longStr = await sr.ReadLineAsync();
-                //            await StreamWriterOtherInformation.WriteLineAsync(longStr);
-                //        }
-                //        if (lineNumber == shortestOffersIndex)
-                //        {
-                //            var longStr = await sr.ReadLineAsync();
-                //            await StreamWriterOtherInformation.WriteLineAsync(longStr);
-                //        }
-                //        lineNumber++;
-                //    }
-                //}
 
+                await StreamWriterOffers.FlushAsync();
+                await streamOffers.DisposeAsync();
+
+                using (StreamReader sr = new StreamReader(assemblyPath + "\\Resource\\SampleOffers.txt"))
+                {
+                    bool writteLong = false;
+                    bool writeCurz = false;
+
+                    int lineNumber = 0;
+
+                    var dict = letterCountDyctionary.OrderBy(e => e.Value).Last();
+                    await StreamWriterOtherInformation.WriteLineAsync($"The most common letter:\n {dict.Key} - {dict.Value.ToString()}");
+
+                    while (sr != null)
+                    {
+                        var ci = await sr.ReadLineAsync();
+
+                        if (lineNumber == longsteOffersOfSimbalsIndex)
+                        {
+                            //var longStr = await sr.ReadLineAsync();
+                            await StreamWriterOtherInformation.WriteLineAsync($"This is a great offer for the number of characters:\n {ci}");
+                            writteLong = true;
+                        }
+                        if (lineNumber == shortestOffersOfWordsIndex)
+                        {
+                            //var Str = await sr.ReadLineAsync();
+                            await StreamWriterOtherInformation.WriteLineAsync($"This is the smallest sentence in terms of the number of words:\n {ci}");
+                            writeCurz = true;
+                        }
+                        if (writteLong && writeCurz)
+                            break;
+                        lineNumber++;
+
+                    }
+
+                }
+
+               
 
             }
             catch (Exception e)
@@ -140,42 +158,50 @@ namespace TextParserApp
                 Console.WriteLine("\n --------------------------------------------------------");
                 Console.WriteLine($"\n {e}");
                 Console.WriteLine("\n --------------------------------------------------------");
+
+                await StreamWriterOffers.FlushAsync();
             }
             finally
             {
-                await StreamWriterOffers.FlushAsync();
                 await StreamWriterPunctuationSymbols.FlushAsync();
                 await StreamWriterWordsStatistic.FlushAsync();
                 await StreamWriterWords.FlushAsync();
-                await streamOtherInformation.FlushAsync();
+                await StreamWriterOtherInformation.FlushAsync();
 
                 streamOffers.DisposeAsync();
                 streamWords.DisposeAsync();
                 streamOtherInformation.DisposeAsync();
                 streamWordsStatistic.DisposeAsync();
                 streamPunctuationSymbols.DisposeAsync();
+                Process.Start("explorer.exe", assemblyPath + "\\Resource\\");
             }
         }
 
-        public static void checkLongAndShortOffers(int length)
+        public static void checkLongOffersOfSimbals(int index, int length)
         {
             if (offersNumber == 0)
             {
-                longsteOffersIndex = 0;
-                longsteOffersWordsLength = length;
+                longsteOffersOfSimbalsIndex = 0;
+                longsteOffersOfSimbalLength = length;
+            }
+            else if (longsteOffersOfSimbalLength < length)
+            {
+                longsteOffersOfSimbalLength = length;
+                longsteOffersOfSimbalsIndex = index;
+            }
 
-                shortestOffersIndex = 0;
-                shortestOffersWordsLengtht = length;
-            }
-            else if (longsteOffersWordsLength < length)
+        }
+        public static void checkShortOffersOfWords(int index, int count)
+        {
+            if (offersNumber == 0)
             {
-                longsteOffersWordsLength = length;
-                longsteOffersIndex = offersNumber;
+                shortestOffersOfWordsIndex = 0;
+                shortestOffersOfWordsCount = count;
             }
-            else if (shortestOffersWordsLengtht > length)
+            else if (shortestOffersOfWordsCount > count)
             {
-                shortestOffersIndex = offersNumber;
-                shortestOffersWordsLengtht = length;
+                shortestOffersOfWordsCount = count;
+                shortestOffersOfWordsIndex = index;
             }
 
         }
@@ -210,22 +236,9 @@ namespace TextParserApp
                 }
             }
         }
-
-        
-
-        //public static KeyValuePair<char, int> getMostCommonLetter()
-        //{
-           
-        //    foreach (var word in wordsCountDictyonary)
-        //    {
-        //       addToletterCountDyctionary(word.Key.ToCharArray());
-        //    }
-            
-            
-        //    return letterCountDyctionary.OrderByDescending(e => e.Value).First();
-
-        //}
-
     }
 }
 
+        
+
+        
