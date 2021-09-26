@@ -14,19 +14,18 @@ namespace TextParserApp
     class Program
     {
 
-        static Dictionary<string, int> wordsCountDictyonary = new Dictionary<string, int>();
-        static Dictionary<char, int> letterCountDyctionary = new Dictionary<char, int>();
-        //static List<string> punctList = new List<string>();
-        static StringBuilder punctList = new StringBuilder();
+        static Dictionary<string, int> WordsCountDictyonary = new Dictionary<string, int>();
+        static Dictionary<char, int> LetterCountDyctionary = new Dictionary<char, int>();
+        static StringBuilder PunctList = new StringBuilder();
 
-        static int longsteOffersOfSimbalsIndex;
-        static int longsteOffersOfSimbalLength;
-        static int shortestOffersOfWordsIndex;
-        static int shortestOffersOfWordsCount;
+        static int LongsteOffersOfSimbalsIndex;
+        static int LongsteOffersOfSimbalLength;
+        static int ShortestOffersOfWordsIndex;
+        static int ShortestOffersOfWordsCount;
 
-        public static int offersNumber = 0;
+        static int OffersNumber = 0;
 
-        static async Task Main(string[] args)
+        static async Task Main( )
         {
             Console.WriteLine("Working...........");
 
@@ -39,17 +38,16 @@ namespace TextParserApp
             Stream streamPunctuationSymbols = new FileStream(assemblyPath + "\\Resource\\streamPunctuationSymbols.txt", FileMode.Create);
             Stream streamOtherInformation = new FileStream(assemblyPath + "\\Resource\\streamOtherInformation.txt", FileMode.Create);
 
-            StreamWriter StreamWriterOffers = new StreamWriter(streamOffers, System.Text.Encoding.Unicode);
-            StreamWriter StreamWriterWords = new StreamWriter(streamWords, System.Text.Encoding.Unicode);
-            StreamWriter StreamWriterWordsStatistic = new StreamWriter(streamWordsStatistic, System.Text.Encoding.Unicode);
-            StreamWriter StreamWriterPunctuationSymbols = new StreamWriter(streamPunctuationSymbols, System.Text.Encoding.Unicode);
-            StreamWriter StreamWriterOtherInformation = new StreamWriter(streamOtherInformation, System.Text.Encoding.Unicode);
+            StreamWriter streamWriterOffers = new StreamWriter(streamOffers, System.Text.Encoding.Unicode);
+            StreamWriter streamWriterWords = new StreamWriter(streamWords, System.Text.Encoding.Unicode);
+            StreamWriter streamWriterWordsStatistic = new StreamWriter(streamWordsStatistic, System.Text.Encoding.Unicode);
+            StreamWriter streamWriterPunctuationSymbols = new StreamWriter(streamPunctuationSymbols, System.Text.Encoding.Unicode);
+            StreamWriter streamWriterOtherInformation = new StreamWriter(streamOtherInformation, System.Text.Encoding.Unicode);
 
-            string offersSplitPattern = @"(?<=(?<!Dr|Mr|Ms|St|aet|Fig|pp|(?:[A-Za-z]\.[A-Za-z])| [A-Z]|[A-Z]{2,})(?:[\.?!]{1,})(?=(?:[""*)}\]]{0,}[\s]{1,}[""]{0,1}[A-Z0-9*#_({[=])))";
+            string offersSplitPattern = @"(?<=(?<!Dr|Mr|Ms|St|aet|Fig|pp|(?:[A-Za-z]\.[A-Za-z])| [A-Z]|[A-Z]{2,})(?:[\.?!]{1,}[""*)}\]]{0,})(?=(?:[\s]{1,}[""]{0,1}[A-Z0-9*#_({[=])|$))";
             Regex offersSplitRegex = new Regex(offersSplitPattern);
 
             string wordsPattern = @"[\w]{1,}";
-            //string wordsPattern = @"(?:[\w<>|+=&_@#$%*(){}[\]]{1,})";
             Regex wordsRegex = new Regex(wordsPattern);
 
             string punctPattern = @"(?:["",.?!:;']{1,1})";
@@ -61,59 +59,59 @@ namespace TextParserApp
             {
                 using (var sr = new StreamReader(resPath))
                 {
-                    var stringLine = sr.ReadLine() + " ";
-
-                    while (stringLine != null)
+                    string stringLine;// = sr.ReadLine();
+                    do
                     {
-                        var offersItems = offersSplitRegex.Split(string.Concat(tempString, stringLine + " ")); // in dictionary test dell  + "\n"
-
-                        for (int i = 0; i < offersItems.Length - 1; i++)
+                        stringLine = sr.ReadLine();
+                        var offersItems = offersSplitRegex.Split(string.Concat(tempString, stringLine + " "));
+                        int offersCountInLine = offersItems.Length;
+                        if (sr.EndOfStream) //in case last Liene add fake Offer
                         {
-                            checkLongOffersOfSimbals(offersNumber, offersItems[i].Length);
+                            offersCountInLine++;
+                        }
+                        for (int i = 0; i < offersCountInLine - 1; i++)
+                        {
+                            CheckLongOffersOfSimbals(OffersNumber, offersItems[i].Length);
 
                             var words = wordsRegex.Matches(offersItems[i]);
-                            checkShortOffersOfWords(offersNumber, words.Count);
+                            CheckShortOffersOfWords(OffersNumber, words.Count);
 
                             foreach (Match word in words)
                             {
-
-                                await StreamWriterWords.WriteLineAsync(word.Value);
+                                await streamWriterWords.WriteLineAsync(word.Value);
 
                                 var charsWord = word.Value.ToLower();
 
-                                addToWordsDictionary(charsWord);
-                                addToletterCountDyctionary(charsWord.ToCharArray());
+                                AddToWordsDictionary(charsWord);
+                                AddToletterCountDyctionary(charsWord.ToCharArray());
                             }
 
                             var punctSimbls = punctRegex.Matches(offersItems[i]);
                             foreach (Match simbl in punctSimbls)
                             {
-                                punctList.Append(simbl.Value);
+                                PunctList.Append(simbl.Value);
                             }
 
-                            await StreamWriterOffers.WriteLineAsync(offersItems[i]);
+                            await streamWriterOffers.WriteLineAsync(offersItems[i]);
 
-                            offersNumber++;
+                            OffersNumber++;
                         }
 
                         tempString = offersItems.Last();
-                        stringLine = sr.ReadLine();
 
-                        //offersNumber++;
                     }
 
-                }
-                await StreamWriterPunctuationSymbols.WriteLineAsync(punctList);
+                    while (!sr.EndOfStream); 
 
-                //StringBuilder buferString = new StringBuilder();
-                foreach (var word in wordsCountDictyonary.OrderBy(word => word.Key))
+                }
+                await streamWriterPunctuationSymbols.WriteLineAsync(PunctList);
+
+                foreach (var word in WordsCountDictyonary.OrderBy(word => word.Key))
                 {
-                    await StreamWriterWordsStatistic.WriteLineAsync($"{word.Key} - {word.Value.ToString()}");
+                    await streamWriterWordsStatistic.WriteLineAsync($"{word.Key} - {word.Value}");
                 }
 
-
-
-                await StreamWriterOffers.FlushAsync();
+                await streamWriterOffers.FlushAsync();
                 await streamOffers.DisposeAsync();
 
                 using (StreamReader sr = new StreamReader(assemblyPath + "\\Resource\\SampleOffers.txt"))
@@ -123,23 +121,23 @@ namespace TextParserApp
 
                     int lineNumber = 0;
 
-                    var dict = letterCountDyctionary.OrderBy(e => e.Value).Last();
-                    await StreamWriterOtherInformation.WriteLineAsync($"The most common letter:\n {dict.Key} - {dict.Value.ToString()}");
+                    var dict = LetterCountDyctionary.OrderBy(e => e.Value).Last();
+                    await streamWriterOtherInformation.WriteLineAsync($"The most common letter:\n {dict.Key} - {dict.Value}");
 
                     while (sr != null)
                     {
                         var ci = await sr.ReadLineAsync();
 
-                        if (lineNumber == longsteOffersOfSimbalsIndex)
+                        if (lineNumber == LongsteOffersOfSimbalsIndex)
                         {
                             //var longStr = await sr.ReadLineAsync();
-                            await StreamWriterOtherInformation.WriteLineAsync($"This is a great offer for the number of characters:\n {ci}");
+                            await streamWriterOtherInformation.WriteLineAsync($"This is a great offer for the number of characters:\n {ci}");
                             writteLong = true;
                         }
-                        if (lineNumber == shortestOffersOfWordsIndex)
+                        if (lineNumber == ShortestOffersOfWordsIndex)
                         {
                             //var Str = await sr.ReadLineAsync();
-                            await StreamWriterOtherInformation.WriteLineAsync($"This is the smallest sentence in terms of the number of words:\n {ci}");
+                            await streamWriterOtherInformation.WriteLineAsync($"This is the smallest sentence in terms of the number of words:\n {ci}");
                             writeCurz = true;
                         }
                         if (writteLong && writeCurz)
@@ -150,95 +148,94 @@ namespace TextParserApp
 
                 }
 
-               
-
             }
             catch (Exception e)
             {
-                Console.WriteLine("\n --------------------------------------------------------");
+                Console.WriteLine("\n -!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!");
                 Console.WriteLine($"\n {e}");
-                Console.WriteLine("\n --------------------------------------------------------");
+                Console.WriteLine("\n -!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!");
 
-                await StreamWriterOffers.FlushAsync();
+                await streamWriterOffers.FlushAsync();
             }
             finally
             {
-                await StreamWriterPunctuationSymbols.FlushAsync();
-                await StreamWriterWordsStatistic.FlushAsync();
-                await StreamWriterWords.FlushAsync();
-                await StreamWriterOtherInformation.FlushAsync();
+                await streamWriterPunctuationSymbols.FlushAsync();
+                await streamWriterWordsStatistic.FlushAsync();
+                await streamWriterWords.FlushAsync();
+                await streamWriterOtherInformation.FlushAsync();
 
-                streamOffers.DisposeAsync();
-                streamWords.DisposeAsync();
-                streamOtherInformation.DisposeAsync();
-                streamWordsStatistic.DisposeAsync();
-                streamPunctuationSymbols.DisposeAsync();
+                await streamOffers.DisposeAsync();
+                await streamWords.DisposeAsync();
+                await streamOtherInformation.DisposeAsync();
+                await streamWordsStatistic.DisposeAsync();
+                await streamPunctuationSymbols.DisposeAsync();
                 Process.Start("explorer.exe", assemblyPath + "\\Resource\\");
             }
-        }
 
-        public static void checkLongOffersOfSimbals(int index, int length)
-        {
-            if (offersNumber == 0)
-            {
-                longsteOffersOfSimbalsIndex = 0;
-                longsteOffersOfSimbalLength = length;
-            }
-            else if (longsteOffersOfSimbalLength < length)
-            {
-                longsteOffersOfSimbalLength = length;
-                longsteOffersOfSimbalsIndex = index;
-            }
-
-        }
-        public static void checkShortOffersOfWords(int index, int count)
-        {
-            if (offersNumber == 0)
-            {
-                shortestOffersOfWordsIndex = 0;
-                shortestOffersOfWordsCount = count;
-            }
-            else if (shortestOffersOfWordsCount > count)
-            {
-                shortestOffersOfWordsCount = count;
-                shortestOffersOfWordsIndex = index;
-            }
 
         }
 
-        public static void addToWordsDictionary(string word)
+        public static void CheckLongOffersOfSimbals(int index, int length)
         {
-            int tempInt;
-            if (!int.TryParse(word, out tempInt))
+            if (OffersNumber == 0)
             {
-                if (wordsCountDictyonary.ContainsKey(word))
+                LongsteOffersOfSimbalsIndex = 0;
+                LongsteOffersOfSimbalLength = length;
+            }
+            else if (LongsteOffersOfSimbalLength < length)
+            {
+                LongsteOffersOfSimbalLength = length;
+                LongsteOffersOfSimbalsIndex = index;
+            }
+
+        }
+        public static void CheckShortOffersOfWords(int index, int count)
+        {
+            if (OffersNumber == 0)
+            {
+                ShortestOffersOfWordsIndex = 0;
+                ShortestOffersOfWordsCount = count;
+            }
+            else if (ShortestOffersOfWordsCount > count)
+            {
+                ShortestOffersOfWordsCount = count;
+                ShortestOffersOfWordsIndex = index;
+            }
+
+        }
+
+        public static void AddToWordsDictionary(string word)
+        {
+            if (!int.TryParse(word, out _))
+            {
+                if (WordsCountDictyonary.ContainsKey(word))
                 {
-                    wordsCountDictyonary[word]++;
+                    WordsCountDictyonary[word]++;
                 }
                 else
                 {
-                    wordsCountDictyonary.Add(word, 1);
+                    WordsCountDictyonary.Add(word, 1);
                 }
             }
         }
 
-        public static void addToletterCountDyctionary(char[] leters)
+        public static void AddToletterCountDyctionary(char[] leters)
         {
             foreach (var leter in leters)
             {
-                if (letterCountDyctionary.ContainsKey(leter))
+                if (LetterCountDyctionary.ContainsKey(leter))
                 {
-                    letterCountDyctionary[leter]++;
+                    LetterCountDyctionary[leter]++;
                 }
                 else
                 {
-                    letterCountDyctionary.Add(leter, 0);
+                    LetterCountDyctionary.Add(leter, 0);
                 }
             }
         }
     }
 }
 
-        
 
-        
+
+
